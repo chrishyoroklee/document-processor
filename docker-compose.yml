@@ -1,7 +1,9 @@
-# Local development database.
-#   docker compose up -d      start Postgres in the background
-#   docker compose down       stop it (data survives in the named volume)
-#   docker compose down -v    stop it and delete the data
+# Local development:
+#   docker compose up -d               start only Postgres (run the app with ./mvnw)
+#   docker compose --profile app up --build
+#                                      build and run Postgres + the whole app on :8080
+#   docker compose down                stop (data survives in the named volume)
+#   docker compose down -v             stop and delete the data
 services:
   postgres:
     image: postgres:16
@@ -18,6 +20,21 @@ services:
       interval: 2s
       timeout: 3s
       retries: 15
+
+  app:
+    # Only started with --profile app, so plain `docker compose up` stays DB-only.
+    profiles: ["app"]
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      # Inside the compose network the database host is the service name, not localhost.
+      DB_URL: jdbc:postgresql://postgres:5432/docproc
+      # Passed through from your shell; empty if unset (uploads then return 502).
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
 
 volumes:
   pgdata:
