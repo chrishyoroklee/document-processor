@@ -1,0 +1,50 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 1016 >>
+stream
+BT
+/F1 20 Tf 1 0 0 1 60 760 Tm (INVOICE) Tj
+/F1 12 Tf 1 0 0 1 60 732 Tm () Tj
+/F1 12 Tf 1 0 0 1 60 712 Tm (Northwind Supplies Ltd.) Tj
+/F1 12 Tf 1 0 0 1 60 692 Tm (12 Harbor Road, Portland, OR 97201) Tj
+/F1 12 Tf 1 0 0 1 60 672 Tm () Tj
+/F1 12 Tf 1 0 0 1 60 652 Tm (Invoice number: NW-2026-0457) Tj
+/F1 12 Tf 1 0 0 1 60 632 Tm (Invoice date: October 3, 2026) Tj
+/F1 12 Tf 1 0 0 1 60 612 Tm (Bill to: Contoso Cafe) Tj
+/F1 12 Tf 1 0 0 1 60 592 Tm () Tj
+/F1 12 Tf 1 0 0 1 60 572 Tm (Description                     Qty    Unit price    Amount) Tj
+/F1 12 Tf 1 0 0 1 60 552 Tm (Espresso beans, 1 kg              4        $18.50    $74.00) Tj
+/F1 12 Tf 1 0 0 1 60 532 Tm (Paper cups, box of 500            2        $32.00    $64.00) Tj
+/F1 12 Tf 1 0 0 1 60 512 Tm (Delivery                                            $12.00) Tj
+/F1 12 Tf 1 0 0 1 60 492 Tm () Tj
+/F1 12 Tf 1 0 0 1 60 472 Tm (Subtotal: $150.00) Tj
+/F1 12 Tf 1 0 0 1 60 452 Tm (Tax \(8%\): $12.00) Tj
+/F1 14 Tf 1 0 0 1 60 432 Tm (Total due: USD 162.00) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000001309 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+1377
+%%EOF

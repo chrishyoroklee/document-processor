@@ -1,0 +1,7 @@
+# Keep the build context small and avoid copying local build output into the image.
+.git
+**/node_modules
+**/dist
+**/target
+samples
+docs

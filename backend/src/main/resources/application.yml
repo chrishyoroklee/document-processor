@@ -1,0 +1,45 @@
+spring:
+  application:
+    name: docproc
+
+  # Defaults match docker-compose.yml. Each can be overridden with an environment
+  # variable, e.g. DB_URL=jdbc:postgresql://db:5432/docproc
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/docproc}
+    username: ${DB_USER:docproc}
+    password: ${DB_PASSWORD:docproc}
+
+  jpa:
+    # Flyway owns the schema. Hibernate only checks that the entities match it
+    # and fails at startup if they don't.
+    hibernate:
+      ddl-auto: validate
+    # Don't keep the DB session open while JSON is rendered. This forces us to
+    # load everything we need inside the service (see "DTOs" in the spec).
+    open-in-view: false
+
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+  # Applies to the RestClient.Builder that ClaudeExtractor uses.
+  # Extraction can take a while, so allow up to two minutes for an answer.
+  http:
+    clients:
+      connect-timeout: 10s
+      read-timeout: 120s
+
+claude:
+  # Read from the environment, never committed. Empty default so the app (and
+  # the tests, which mock Claude) can start without a key.
+  api-key: ${ANTHROPIC_API_KEY:}
+  base-url: https://api.anthropic.com
+  model: claude-opus-5-5
+  # Extraction is a simple task; low effort keeps it fast and cheap.
+  effort: low
+
+# Print every SQL statement Hibernate runs, so you can see what each request costs.
+logging:
+  level:
+    org.hibernate.SQL: debug
