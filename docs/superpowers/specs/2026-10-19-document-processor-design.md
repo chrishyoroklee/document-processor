@@ -172,7 +172,8 @@ Decisions:
 | PUT | `/api/documents/{id}` | JSON `DocumentRequest` | `200` + `DocumentResponse` | 6 |
 | POST | `/api/documents/upload` | multipart field `file` | `201` + `DocumentResponse` | 5 |
 
-- `POST /api/documents` is manual entry. Its `fileName` is set to `"manual"`.
+- `POST /api/documents` is manual entry. Its `fileName` is set to `"manual"`
+  and its status to `REVIEWED`, since a person typed it in.
 - `PUT` replaces all header fields and the full line item list, and sets
   `status = REVIEWED`.
 - The list endpoint returns `DocumentSummary` without line items, so it runs

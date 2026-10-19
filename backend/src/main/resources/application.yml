@@ -17,3 +17,8 @@ spring:
     # Don't keep the DB session open while JSON is rendered. This forces us to
     # load everything we need inside the service (see "DTOs" in the spec).
     open-in-view: false
+
+# Print every SQL statement Hibernate runs, so you can see what each request costs.
+logging:
+  level:
+    org.hibernate.SQL: debug
