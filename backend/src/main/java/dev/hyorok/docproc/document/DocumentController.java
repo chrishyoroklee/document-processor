@@ -3,6 +3,7 @@ package dev.hyorok.docproc.document;
 import java.net.URI;
 import java.util.List;
 
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -10,7 +11,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import dev.hyorok.docproc.document.dto.DocumentRequest;
 import dev.hyorok.docproc.document.dto.DocumentResponse;
@@ -33,6 +36,14 @@ public class DocumentController {
     @PostMapping
     public ResponseEntity<DocumentResponse> create(@RequestBody DocumentRequest request) {
         DocumentResponse created = service.create(request);
+        return ResponseEntity.created(URI.create("/api/documents/" + created.id())).body(created);
+    }
+
+    // multipart/form-data is how browsers upload files. @RequestParam("file") picks
+    // the form field named "file".
+    @PostMapping(path = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<DocumentResponse> upload(@RequestParam("file") MultipartFile file) {
+        DocumentResponse created = service.upload(file);
         return ResponseEntity.created(URI.create("/api/documents/" + created.id())).body(created);
     }
 

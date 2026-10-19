@@ -29,6 +29,12 @@
             <artifactId>spring-boot-starter-webmvc</artifactId>
         </dependency>
 
+        <!-- RestClient.Builder bean, used to call the Claude API -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-restclient</artifactId>
+        </dependency>
+
         <!-- Hibernate + Spring Data JPA + a JDBC connection pool (HikariCP) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

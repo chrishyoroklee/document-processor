@@ -1,0 +1,53 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "documentType",
+    "vendorName",
+    "documentNumber",
+    "documentDate",
+    "currency",
+    "totalAmount",
+    "lineItems"
+  ],
+  "properties": {
+    "documentType": {
+      "type": "string",
+      "enum": ["INVOICE", "RECEIPT", "PURCHASE_ORDER", "OTHER"]
+    },
+    "vendorName": {
+      "description": "The business that issued the document.",
+      "anyOf": [{ "type": "string" }, { "type": "null" }]
+    },
+    "documentNumber": {
+      "description": "Invoice, receipt or order number as printed.",
+      "anyOf": [{ "type": "string" }, { "type": "null" }]
+    },
+    "documentDate": {
+      "description": "Issue date.",
+      "anyOf": [{ "type": "string", "format": "date" }, { "type": "null" }]
+    },
+    "currency": {
+      "description": "ISO 4217 code, for example USD, EUR, KRW.",
+      "anyOf": [{ "type": "string" }, { "type": "null" }]
+    },
+    "totalAmount": {
+      "description": "Final amount due or paid, including tax.",
+      "anyOf": [{ "type": "number" }, { "type": "null" }]
+    },
+    "lineItems": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["description", "quantity", "unitPrice", "amount"],
+        "properties": {
+          "description": { "type": "string" },
+          "quantity": { "anyOf": [{ "type": "number" }, { "type": "null" }] },
+          "unitPrice": { "anyOf": [{ "type": "number" }, { "type": "null" }] },
+          "amount": { "anyOf": [{ "type": "number" }, { "type": "null" }] }
+        }
+      }
+    }
+  }
+}

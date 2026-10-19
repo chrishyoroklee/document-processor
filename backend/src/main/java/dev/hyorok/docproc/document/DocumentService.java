@@ -1,14 +1,21 @@
 package dev.hyorok.docproc.document;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import dev.hyorok.docproc.document.dto.DocumentRequest;
 import dev.hyorok.docproc.document.dto.DocumentResponse;
 import dev.hyorok.docproc.document.dto.DocumentSummary;
+import dev.hyorok.docproc.extraction.ClaudeExtractor;
+import dev.hyorok.docproc.extraction.ExtractedDocument;
 
 // @Service marks this as a Spring bean (an object Spring creates and manages).
 // Business logic lives here. Entities go in and out of the repository here, and
@@ -16,13 +23,45 @@ import dev.hyorok.docproc.document.dto.DocumentSummary;
 @Service
 public class DocumentService {
 
-    private final DocumentRepository repository;
+    // The file types Claude can read directly.
+    private static final Set<String> SUPPORTED_TYPES =
+            Set.of("application/pdf", "image/png", "image/jpeg", "image/webp");
 
-    // Constructor injection: Spring sees the parameter type, finds the matching
-    // bean (the generated DocumentRepository), and passes it in. No @Autowired needed
-    // when there is a single constructor.
-    public DocumentService(DocumentRepository repository) {
+    private final DocumentRepository repository;
+    private final ClaudeExtractor extractor;
+
+    // Constructor injection: Spring sees the parameter types, finds the matching
+    // beans, and passes them in. No @Autowired needed when there is a single constructor.
+    public DocumentService(DocumentRepository repository, ClaudeExtractor extractor) {
         this.repository = repository;
+        this.extractor = extractor;
+    }
+
+    // Deliberately NOT @Transactional. The Claude call can take many seconds, and a
+    // transaction would hold a database connection the whole time. Instead we call
+    // Claude first, then save() runs in its own short transaction.
+    public DocumentResponse upload(MultipartFile file) {
+        String contentType = file.getContentType();
+        if (contentType == null || !SUPPORTED_TYPES.contains(contentType)) {
+            throw new UnsupportedFileTypeException(contentType);
+        }
+
+        ExtractedDocument extracted = extractor.extract(readBytes(file), contentType);
+
+        String fileName = Objects.requireNonNullElse(file.getOriginalFilename(), "upload");
+        Document doc = new Document(fileName, extracted.documentType());
+        doc.setVendorName(extracted.vendorName());
+        doc.setDocumentNumber(extracted.documentNumber());
+        doc.setDocumentDate(extracted.documentDate());
+        doc.setCurrency(extracted.currency());
+        doc.setTotalAmount(extracted.totalAmount());
+        doc.replaceLineItems(extracted.lineItems().stream()
+                .map(li -> new LineItem(li.description(), li.quantity(), li.unitPrice(), li.amount()))
+                .toList());
+
+        // The entity is new and its line items are a plain list in memory, so
+        // building the DTO here needs no open transaction.
+        return DocumentResponse.from(repository.save(doc));
     }
 
     // @Transactional opens a DB transaction for the whole method: either every
@@ -55,6 +94,15 @@ public class DocumentService {
     @Transactional
     public void delete(Long id) {
         repository.delete(find(id));
+    }
+
+    private static byte[] readBytes(MultipartFile file) {
+        try {
+            return file.getBytes();
+        } catch (IOException e) {
+            // A checked exception we can't do anything useful with: wrap it.
+            throw new UncheckedIOException(e);
+        }
     }
 
     private Document find(Long id) {
