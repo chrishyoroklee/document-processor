@@ -75,6 +75,21 @@ public class DocumentService {
         return DocumentResponse.from(repository.save(doc));
     }
 
+    /** Replaces every field and line item with the corrected values. */
+    @Transactional
+    public DocumentResponse update(Long id, DocumentRequest request) {
+        // find() returns a *managed* entity: Hibernate tracks it, and any change we
+        // make is written to the database when the transaction commits. No save() needed.
+        Document doc = find(id);
+        apply(request, doc);
+        doc.setStatus(DocumentStatus.REVIEWED);
+        // Normally the SQL runs at commit, after we've built the response. Flushing
+        // now runs it early, so the new line item ids and the updatedAt timestamp
+        // are filled in before we copy them into the DTO.
+        repository.flush();
+        return DocumentResponse.from(doc);
+    }
+
     // readOnly = true lets Hibernate skip dirty checking: a small speedup, and it
     // documents that this method doesn't change anything.
     @Transactional(readOnly = true)

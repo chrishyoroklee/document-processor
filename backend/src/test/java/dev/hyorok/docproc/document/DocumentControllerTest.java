@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -132,6 +133,67 @@ class DocumentControllerTest {
     }
 
     @Test
+    void updateReplacesFieldsAndLineItemsAndMarksReviewed() throws Exception {
+        long id = uploadInvoice();
+        String corrected = """
+                {
+                  "documentType": "RECEIPT",
+                  "vendorName": "Acme Corporation",
+                  "currency": "EUR",
+                  "totalAmount": 99.99,
+                  "lineItems": [{"description": "Only item", "amount": 99.99}]
+                }
+                """;
+
+        mvc.perform(put("/api/documents/{id}", id).contentType(MediaType.APPLICATION_JSON).content(corrected))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("REVIEWED"))
+                .andExpect(jsonPath("$.documentType").value("RECEIPT"))
+                .andExpect(jsonPath("$.vendorName").value("Acme Corporation"))
+                // Fields left out of a PUT are cleared: PUT replaces the whole document.
+                .andExpect(jsonPath("$.documentNumber").doesNotExist())
+                .andExpect(jsonPath("$.lineItems.length()").value(1))
+                .andExpect(jsonPath("$.lineItems[0].id").isNumber());
+
+        // The old line items are really gone from the database (orphanRemoval).
+        mvc.perform(get("/api/documents/{id}", id))
+                .andExpect(jsonPath("$.lineItems.length()").value(1))
+                .andExpect(jsonPath("$.lineItems[0].description").value("Only item"));
+    }
+
+    @Test
+    void updateUnknownIdReturns404() throws Exception {
+        mvc.perform(put("/api/documents/{id}", 999_999).contentType(MediaType.APPLICATION_JSON).content(INVOICE_JSON))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void invalidRequestReturns400WithFieldErrors() throws Exception {
+        String invalid = """
+                {
+                  "currency": "us dollars",
+                  "totalAmount": -5,
+                  "lineItems": [{"description": ""}]
+                }
+                """;
+
+        mvc.perform(post("/api/documents").contentType(MediaType.APPLICATION_JSON).content(invalid))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("Validation failed"))
+                .andExpect(jsonPath("$.errors.documentType").value("must not be null"))
+                .andExpect(jsonPath("$.errors.currency").value("must be a 3-letter ISO code like USD"))
+                .andExpect(jsonPath("$.errors.totalAmount").exists())
+                .andExpect(jsonPath("$.errors['lineItems[0].description']").exists());
+    }
+
+    @Test
+    void malformedJsonReturns400() throws Exception {
+        mvc.perform(post("/api/documents").contentType(MediaType.APPLICATION_JSON).content("{\"documentType\": \"NOPE\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
     void uploadSavesWhatClaudeExtracted() throws Exception {
         var pdf = new MockMultipartFile("file", "invoice.pdf", "application/pdf", "%PDF".getBytes());
         when(extractor.extract(any(), eq("application/pdf"))).thenReturn(new ExtractedDocument(
@@ -168,6 +230,19 @@ class DocumentControllerTest {
         mvc.perform(multipart("/api/documents/upload").file(png))
                 .andExpect(status().isBadGateway())
                 .andExpect(jsonPath("$.detail").value("Claude API returned 500"));
+    }
+
+    /** Creates a document the way the app normally does: upload + extraction. */
+    private long uploadInvoice() throws Exception {
+        when(extractor.extract(any(), any())).thenReturn(new ExtractedDocument(
+                DocumentType.INVOICE, "Acme Corp", "INV-9", null, "USD", new BigDecimal("150.50"),
+                List.of(new ExtractedLineItem("Widget", null, null, new BigDecimal("100")),
+                        new ExtractedLineItem("Gadget", null, null, new BigDecimal("50.50")))));
+        var pdf = new MockMultipartFile("file", "invoice.pdf", "application/pdf", "%PDF".getBytes());
+        String body = mvc.perform(multipart("/api/documents/upload").file(pdf))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        return JsonPath.<Number>read(body, "$.id").longValue();
     }
 
     private long createInvoice() throws Exception {

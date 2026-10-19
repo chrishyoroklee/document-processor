@@ -9,11 +9,14 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+
+import jakarta.validation.Valid;
 
 import dev.hyorok.docproc.document.dto.DocumentRequest;
 import dev.hyorok.docproc.document.dto.DocumentResponse;
@@ -31,10 +34,12 @@ public class DocumentController {
     }
 
     // @RequestBody: Jackson parses the JSON body into a DocumentRequest.
+    // @Valid: then the constraint annotations on the record are checked. If any
+    // fail, the method never runs and the client gets a 400.
     // ResponseEntity lets us pick the status (201) and add a Location header
     // pointing at the new resource.
     @PostMapping
-    public ResponseEntity<DocumentResponse> create(@RequestBody DocumentRequest request) {
+    public ResponseEntity<DocumentResponse> create(@Valid @RequestBody DocumentRequest request) {
         DocumentResponse created = service.create(request);
         return ResponseEntity.created(URI.create("/api/documents/" + created.id())).body(created);
     }
@@ -56,6 +61,13 @@ public class DocumentController {
     @GetMapping("/{id}")
     public DocumentResponse get(@PathVariable Long id) {
         return service.get(id);
+    }
+
+    // PUT replaces the whole document with what the client sends: this is how the
+    // review page saves corrections.
+    @PutMapping("/{id}")
+    public DocumentResponse update(@PathVariable Long id, @Valid @RequestBody DocumentRequest request) {
+        return service.update(id, request);
     }
 
     @DeleteMapping("/{id}")
