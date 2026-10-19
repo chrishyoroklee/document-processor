@@ -6,20 +6,6 @@ they're saved to Postgres, and a small React page lets you review and correct th
 Built as a learning project for Java 21 and Spring Boot 4. Each step of the build
 is its own commit, so `git log --reverse` reads like a tutorial:
 
-| Commit | What it teaches |
-|---|---|
-| step 1 | Spring Boot startup, `@RestController` |
-| step 2 | docker-compose Postgres, Flyway migrations, schema design |
-| step 3 | JPA entities, `@OneToMany`, Spring Data repositories, DTO records |
-| step 4 | Integration tests with JUnit 5, Testcontainers and MockMvc |
-| step 5 | Calling the Claude API with `RestClient`, structured JSON output, config properties |
-| step 6 | `PUT`, Bean Validation, `@RestControllerAdvice` and ProblemDetail errors |
-| step 7 | React review page, Vite dev proxy |
-| step 8 | Multi-stage Dockerfile, GitHub Actions CI |
-
-The design and the reasoning behind it are in
-[docs/superpowers/specs/2026-10-19-document-processor-design.md](docs/superpowers/specs/2026-10-19-document-processor-design.md).
-
 ## Run it locally
 
 You need Java 21, Node 22 and Docker.
