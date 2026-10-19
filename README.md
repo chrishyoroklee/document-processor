@@ -3,9 +3,6 @@
 Upload an invoice, receipt or purchase order. Claude extracts the key fields,
 they're saved to Postgres, and a small React page lets you review and correct them.
 
-Built as a learning project for Java 21 and Spring Boot 4. Each step of the build
-is its own commit, so `git log --reverse` reads like a tutorial:
-
 ## Run it locally
 
 You need Java 21, Node 22 and Docker.
