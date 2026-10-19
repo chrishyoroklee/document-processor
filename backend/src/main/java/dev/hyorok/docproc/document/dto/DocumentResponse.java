@@ -3,6 +3,7 @@ package dev.hyorok.docproc.document.dto;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
 
 import dev.hyorok.docproc.document.Document;
@@ -21,10 +22,11 @@ public record DocumentResponse(
         String currency,
         BigDecimal totalAmount,
         List<LineItemResponse> lineItems,
+        List<AppliedCorrectionResponse> appliedCorrections,
         Instant createdAt,
         Instant updatedAt) {
 
-    /** Must be called inside a transaction: it reads the lazy line item list. */
+    /** Must be called inside a transaction: it reads the lazy line item and correction collections. */
     public static DocumentResponse from(Document doc) {
         return new DocumentResponse(
                 doc.getId(),
@@ -37,6 +39,10 @@ public record DocumentResponse(
                 doc.getCurrency(),
                 doc.getTotalAmount(),
                 doc.getLineItems().stream().map(LineItemResponse::from).toList(),
+                doc.getAppliedCorrections().stream()
+                        .map(AppliedCorrectionResponse::from)
+                        .sorted(Comparator.comparing(AppliedCorrectionResponse::id))
+                        .toList(),
                 doc.getCreatedAt(),
                 doc.getUpdatedAt());
     }

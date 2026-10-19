@@ -8,7 +8,8 @@
     "documentDate",
     "currency",
     "totalAmount",
-    "lineItems"
+    "lineItems",
+    "appliedCorrectionIds"
   ],
   "properties": {
     "documentType": {
@@ -48,6 +49,11 @@
           "amount": { "anyOf": [{ "type": "number" }, { "type": "null" }] }
         }
       }
+    },
+    "appliedCorrectionIds": {
+      "description": "Ids of the past corrections you applied to this document. Empty if none.",
+      "type": "array",
+      "items": { "type": "integer" }
     }
   }
 }

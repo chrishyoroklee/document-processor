@@ -1,6 +1,7 @@
 package dev.hyorok.docproc.extraction;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.hasItem;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath;
@@ -55,13 +56,14 @@ class ClaudeExtractorTest {
                 .andExpect(jsonPath("$.model").value("claude-opus-5-5"))
                 .andExpect(jsonPath("$.output_config.effort").value("low"))
                 .andExpect(jsonPath("$.output_config.format.type").value("json_schema"))
+                .andExpect(jsonPath("$.output_config.format.schema.required").value(hasItem("appliedCorrectionIds")))
                 .andExpect(jsonPath("$.messages[0].content[0].type").value("document"))
                 .andExpect(jsonPath("$.messages[0].content[0].source.media_type").value("application/pdf"))
                 // "%PDF" base64-encoded
                 .andExpect(jsonPath("$.messages[0].content[0].source.data").value("JVBERg=="))
                 .andRespond(withSuccess(fixture("success.json"), MediaType.APPLICATION_JSON));
 
-        ExtractedDocument result = extractor.extract("%PDF".getBytes(StandardCharsets.US_ASCII), "application/pdf");
+        ExtractedDocument result = extractor.extract("%PDF".getBytes(StandardCharsets.US_ASCII), "application/pdf", List.of());
 
         server.verify();
         assertThat(result.documentType()).isEqualTo(DocumentType.INVOICE);
@@ -75,7 +77,7 @@ class ClaudeExtractorTest {
 
     @Test
     void sendsImagesAsImageBlock() {
-        Map<String, Object> request = extractor.buildRequest(new byte[] {1, 2, 3}, "image/png");
+        Map<String, Object> request = extractor.buildRequest(new byte[] {1, 2, 3}, "image/png", List.of());
 
         @SuppressWarnings("unchecked")
         var message = (Map<String, Object>) ((List<?>) request.get("messages")).get(0);
@@ -83,6 +85,22 @@ class ClaudeExtractorTest {
         var fileBlock = (Map<String, Object>) ((List<?>) message.get("content")).get(0);
 
         assertThat(fileBlock).containsEntry("type", "image");
+    }
+
+    @Test
+    void pastCorrectionsAreListedInTheSystemPrompt() {
+        var correction = new PastCorrection(7, "Northwind Supplies Ltd.", "vendorName", "Northwind Supplies", "Northwind Supplies Ltd.");
+
+        Map<String, Object> request = extractor.buildRequest(new byte[] {1}, "image/png", List.of(correction));
+
+        assertThat((String) request.get("system"))
+                .contains("Reviewers corrected some earlier extractions")
+                .contains("[7] Northwind Supplies Ltd. | vendorName | \"Northwind Supplies\" -> \"Northwind Supplies Ltd.\"");
+    }
+
+    @Test
+    void withoutCorrectionsThePromptHasNoCorrectionSection() {
+        assertThat(ClaudeExtractor.systemPrompt(List.of())).doesNotContain("Reviewers corrected");
     }
 
     @Test
@@ -106,7 +124,7 @@ class ClaudeExtractorTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .body("{\"type\":\"error\",\"error\":{\"type\":\"authentication_error\"}}"));
 
-        assertThatThrownBy(() -> extractor.extract(new byte[] {1}, "image/png"))
+        assertThatThrownBy(() -> extractor.extract(new byte[] {1}, "image/png", List.of()))
                 .isInstanceOf(ExtractionException.class)
                 .hasMessageContaining("401");
     }

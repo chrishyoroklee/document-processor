@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +37,20 @@ public class ClaudeExtractor {
             Use null for any field that is not present in the document. Never guess.
             Copy numbers exactly as printed, without currency symbols.""";
 
+    private static final String CORRECTIONS_INTRO = """
+
+
+            Reviewers corrected some earlier extractions. Each line is:
+            [id] vendor | field | what was extracted -> what it should have been
+
+            If the document you are reading is from the same vendor and the same mistake
+            would happen again, use the corrected form and put that line's id in
+            appliedCorrectionIds. Ignore corrections for other vendors, and don't apply a
+            correction just because the field name matches. If none apply, return an
+            empty appliedCorrectionIds list.
+
+            """;
+
     private final RestClient restClient;
     private final ClaudeProperties properties;
     private final JsonMapper jsonMapper;
@@ -57,8 +72,12 @@ public class ClaudeExtractor {
                 .build();
     }
 
-    public ExtractedDocument extract(byte[] content, String mediaType) {
-        Map<String, Object> request = buildRequest(content, mediaType);
+    /**
+     * @param corrections recent reviewer fixes, sent along so Claude can avoid
+     *                    repeating mistakes; may be empty
+     */
+    public ExtractedDocument extract(byte[] content, String mediaType, List<PastCorrection> corrections) {
+        Map<String, Object> request = buildRequest(content, mediaType, corrections);
 
         String responseBody;
         try {
@@ -85,7 +104,7 @@ public class ClaudeExtractor {
      * Builds the JSON request body as nested Maps and Lists. Jackson serializes it
      * exactly as written, so this reads almost like the JSON in the API docs.
      */
-    Map<String, Object> buildRequest(byte[] content, String mediaType) {
+    Map<String, Object> buildRequest(byte[] content, String mediaType, List<PastCorrection> corrections) {
         // PDFs go in a "document" block, images in an "image" block. Same source shape.
         String blockType = MediaType.APPLICATION_PDF_VALUE.equals(mediaType) ? "document" : "image";
         Map<String, Object> fileBlock = Map.of(
@@ -99,7 +118,7 @@ public class ClaudeExtractor {
         return Map.of(
                 "model", properties.model(),
                 "max_tokens", 16000,
-                "system", SYSTEM_PROMPT,
+                "system", systemPrompt(corrections),
                 "output_config", Map.of(
                         "effort", properties.effort(),
                         "format", Map.of("type", "json_schema", "schema", schema)),
@@ -109,6 +128,21 @@ public class ClaudeExtractor {
                         "content", List.of(
                                 fileBlock,
                                 Map.of("type", "text", "text", "Extract the fields from this document.")))));
+    }
+
+    /** The fixed instructions, plus one line per past correction when there are any. */
+    static String systemPrompt(List<PastCorrection> corrections) {
+        if (corrections.isEmpty()) {
+            return SYSTEM_PROMPT;
+        }
+        return SYSTEM_PROMPT + CORRECTIONS_INTRO + corrections.stream()
+                .map(c -> "[%d] %s | %s | %s -> %s".formatted(
+                        c.id(), c.vendorName(), c.fieldName(), quote(c.extractedValue()), quote(c.correctedValue())))
+                .collect(Collectors.joining("\n"));
+    }
+
+    private static String quote(String value) {
+        return value == null ? "null" : '"' + value + '"';
     }
 
     /**

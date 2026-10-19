@@ -15,6 +15,14 @@ export interface LineItemResponse {
   amount: number | null
 }
 
+export interface AppliedCorrection {
+  id: number
+  vendorName: string | null
+  fieldName: string
+  extractedValue: string | null
+  correctedValue: string | null
+}
+
 export interface DocumentResponse {
   id: number
   fileName: string
@@ -26,6 +34,7 @@ export interface DocumentResponse {
   currency: string | null
   totalAmount: number | null
   lineItems: LineItemResponse[]
+  appliedCorrections: AppliedCorrection[]
   createdAt: string
   updatedAt: string
 }

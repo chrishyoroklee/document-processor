@@ -16,6 +16,7 @@ is its own commit, so `git log --reverse` reads like a tutorial:
 | step 6 | `PUT`, Bean Validation, `@RestControllerAdvice` and ProblemDetail errors |
 | step 7 | React review page, Vite dev proxy |
 | step 8 | Multi-stage Dockerfile, GitHub Actions CI |
+| step 9 | Learning from corrections: second migration, `@ManyToMany`, prompts built from data |
 
 The design and the reasoning behind it are in
 [docs/superpowers/specs/2026-10-19-document-processor-design.md](docs/superpowers/specs/2026-10-19-document-processor-design.md).
@@ -37,6 +38,15 @@ cd frontend && npm install && npm run dev
 ```
 
 Open http://localhost:5173 and upload `samples/invoice.pdf`.
+
+## The twist: it learns from your corrections
+
+When you fix a field Claude got wrong and click **Save as reviewed**, the fix is
+remembered. Every later upload sends recent fixes to Claude, which applies the ones
+for the same vendor. The review page then shows "Learned from 1 past correction".
+
+To see it: upload `samples/invoice.pdf`, change the vendor to something else
+(say `Northwind Supplies Ltd. (Portland)`), save, then upload the same file again.
 
 ## Run everything in Docker
 

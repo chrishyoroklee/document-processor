@@ -13,9 +13,13 @@ import org.springframework.web.multipart.MultipartFile;
 
 import dev.hyorok.docproc.document.dto.DocumentRequest;
 import dev.hyorok.docproc.document.dto.DocumentResponse;
+import dev.hyorok.docproc.correction.Correction;
+import dev.hyorok.docproc.correction.CorrectionService;
+import dev.hyorok.docproc.correction.FieldChange;
 import dev.hyorok.docproc.document.dto.DocumentSummary;
 import dev.hyorok.docproc.extraction.ClaudeExtractor;
 import dev.hyorok.docproc.extraction.ExtractedDocument;
+import dev.hyorok.docproc.extraction.PastCorrection;
 
 // @Service marks this as a Spring bean (an object Spring creates and manages).
 // Business logic lives here. Entities go in and out of the repository here, and
@@ -29,12 +33,14 @@ public class DocumentService {
 
     private final DocumentRepository repository;
     private final ClaudeExtractor extractor;
+    private final CorrectionService corrections;
 
     // Constructor injection: Spring sees the parameter types, finds the matching
     // beans, and passes them in. No @Autowired needed when there is a single constructor.
-    public DocumentService(DocumentRepository repository, ClaudeExtractor extractor) {
+    public DocumentService(DocumentRepository repository, ClaudeExtractor extractor, CorrectionService corrections) {
         this.repository = repository;
         this.extractor = extractor;
+        this.corrections = corrections;
     }
 
     // Deliberately NOT @Transactional. The Claude call can take many seconds, and a
@@ -46,7 +52,14 @@ public class DocumentService {
             throw new UnsupportedFileTypeException(contentType);
         }
 
-        ExtractedDocument extracted = extractor.extract(readBytes(file), contentType);
+        // Send recent reviewer fixes along, so Claude can avoid repeating mistakes.
+        List<Correction> recent = corrections.recent();
+        List<PastCorrection> hints = recent.stream()
+                .map(c -> new PastCorrection(
+                        c.getId(), c.getVendorName(), c.getFieldName(), c.getExtractedValue(), c.getCorrectedValue()))
+                .toList();
+
+        ExtractedDocument extracted = extractor.extract(readBytes(file), contentType, hints);
 
         String fileName = Objects.requireNonNullElse(file.getOriginalFilename(), "upload");
         Document doc = new Document(fileName, extracted.documentType());
@@ -59,7 +72,11 @@ public class DocumentService {
                 .map(li -> new LineItem(li.description(), li.quantity(), li.unitPrice(), li.amount()))
                 .toList());
 
-        // The entity is new and its line items are a plain list in memory, so
+        // Keep only ids we actually sent: never trust an id from the model blindly.
+        Set<Long> appliedIds = Set.copyOf(extracted.appliedCorrectionIds());
+        doc.setAppliedCorrections(recent.stream().filter(c -> appliedIds.contains(c.getId())).toList());
+
+        // The entity is new and its collections are plain in-memory lists, so
         // building the DTO here needs no open transaction.
         return DocumentResponse.from(repository.save(doc));
     }
@@ -81,6 +98,16 @@ public class DocumentService {
         // find() returns a *managed* entity: Hibernate tracks it, and any change we
         // make is written to the database when the transaction commits. No save() needed.
         Document doc = find(id);
+
+        // The first review of an extracted document: every field the reviewer
+        // changed is a mistake Claude made, so remember it for next time.
+        // (Later edits to a REVIEWED document only correct a person, not Claude.)
+        if (doc.getStatus() == DocumentStatus.EXTRACTED) {
+            List<FieldChange> changes = FieldChanges.between(doc, request);
+            String vendor = request.vendorName() != null ? request.vendorName() : doc.getVendorName();
+            corrections.record(doc.getId(), vendor, changes);
+        }
+
         apply(request, doc);
         doc.setStatus(DocumentStatus.REVIEWED);
         // Normally the SQL runs at commit, after we've built the response. Flushing

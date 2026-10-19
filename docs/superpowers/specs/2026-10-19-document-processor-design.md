@@ -33,6 +33,7 @@ over code that is clever or complete.
 | 6 | `PUT` to correct fields, validation, error handling | Bean Validation, `@RestControllerAdvice`, ProblemDetail |
 | 7 | React page to upload, list and edit documents | Vite dev proxy (same origin, so no CORS), connecting a frontend |
 | 8 | Dockerfile and GitHub Actions CI | Multi-stage build, CI pipeline |
+| 9 | Learn from reviewer corrections | Second Flyway migration, `@ManyToMany`, derived queries, prompts built from data |
 
 ## Stack
 
@@ -318,6 +319,38 @@ cheaper option. Expected cost on Opus at low effort is a few cents per page.
   a JRE image.
 - GitHub Actions on every push: set up Java 21, run `./mvnw verify` (Docker is
   available on the runner for Testcontainers), and build the frontend.
+
+## Step 9: learning from corrections
+
+When a reviewer saves a document that is still `EXTRACTED`, every changed header
+field (type, vendor, number, date, currency, total) is stored as a correction.
+Line items are not tracked. Edits to an already `REVIEWED` document are not
+recorded, since they correct a person rather than Claude.
+
+Every upload sends the 30 most recent corrections in the system prompt, one
+line each: `[id] vendor | field | "extracted" -> "corrected"`. Claude applies
+only corrections for the same vendor and returns the ids it used in a new
+schema field, `appliedCorrectionIds`. The service keeps only ids it actually
+sent and links them to the new document.
+
+We chose one call with recent corrections over two passes (extract, look up
+the vendor's corrections, extract again) to keep latency and cost unchanged.
+
+Schema, `V2__create_corrections.sql`:
+
+- `corrections(id, document_id, vendor_name, field_name, extracted_value,
+  corrected_value, created_at)`. `document_id` is `ON DELETE SET NULL` so
+  learning survives document deletes. Values are stored as text.
+- `document_applied_corrections(document_id, correction_id)` join table,
+  mapped as `@ManyToMany` on `Document`.
+
+Packages: `correction` (entity, repository with
+`findTop30ByOrderByCreatedAtDesc`, service) depends on nothing else.
+`document` computes the field differences (`FieldChanges`) and calls it.
+`extraction` receives corrections as a plain `PastCorrection` record.
+
+`DocumentResponse` gains `appliedCorrections`; the review page shows a
+"Learned from N past corrections" box.
 
 ## Out of scope
 

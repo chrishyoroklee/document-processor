@@ -4,8 +4,11 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -15,6 +18,9 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
@@ -23,6 +29,8 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.type.SqlTypes;
+
+import dev.hyorok.docproc.correction.Correction;
 
 // An @Entity is a Java class that maps to a table. Each instance is one row.
 // Entities can't be records: JPA needs a no-arg constructor and mutable fields
@@ -79,6 +87,18 @@ public class Document {
     @OneToMany(mappedBy = "document", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("position")
     private List<LineItem> lineItems = new ArrayList<>();
+
+    // Past corrections Claude said it used when extracting this document.
+    // Many-to-many needs a join table: each row links one document to one correction.
+    // No cascade: corrections exist on their own, linking must never create or delete them.
+    // A Set rather than a List: Hibernate handles many-to-many Sets more efficiently,
+    // and a correction can't be applied twice to the same document anyway.
+    @ManyToMany
+    @JoinTable(
+            name = "document_applied_corrections",
+            joinColumns = @JoinColumn(name = "document_id"),
+            inverseJoinColumns = @JoinColumn(name = "correction_id"))
+    private Set<Correction> appliedCorrections = new HashSet<>();
 
     protected Document() {
         // for JPA
@@ -172,6 +192,15 @@ public class Document {
 
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public Set<Correction> getAppliedCorrections() {
+        return Collections.unmodifiableSet(appliedCorrections);
+    }
+
+    public void setAppliedCorrections(Collection<Correction> corrections) {
+        appliedCorrections.clear();
+        appliedCorrections.addAll(corrections);
     }
 
     /** Read-only view so callers must go through {@link #replaceLineItems}. */

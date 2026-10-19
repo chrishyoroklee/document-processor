@@ -10,6 +10,8 @@ import dev.hyorok.docproc.document.DocumentType;
  * What Claude found in a document. Component names match the JSON schema in
  * extraction-schema.json exactly, so Jackson maps the reply with no annotations.
  * Any field except documentType and lineItems may be null ("not found").
+ *
+ * <p>appliedCorrectionIds lists the past corrections Claude says it used.
  */
 public record ExtractedDocument(
         DocumentType documentType,
@@ -18,5 +20,11 @@ public record ExtractedDocument(
         LocalDate documentDate,
         String currency,
         BigDecimal totalAmount,
-        List<ExtractedLineItem> lineItems) {
+        List<ExtractedLineItem> lineItems,
+        List<Long> appliedCorrectionIds) {
+
+    public ExtractedDocument {
+        lineItems = lineItems == null ? List.of() : lineItems;
+        appliedCorrectionIds = appliedCorrectionIds == null ? List.of() : appliedCorrectionIds;
+    }
 }

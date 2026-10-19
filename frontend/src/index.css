@@ -255,6 +255,28 @@ button.icon {
   display: none;
 }
 
+.learned {
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 16px;
+}
+
+.learned ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.learned code {
+  font-size: 13px;
+}
+
+.hint {
+  margin: -8px 0 16px;
+  font-size: 13px;
+}
+
 .error {
   color: var(--danger);
 }

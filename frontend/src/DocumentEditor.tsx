@@ -30,6 +30,7 @@ interface Form {
 const str = (v: string | number | null) => (v == null ? '' : String(v))
 const textOrNull = (s: string) => (s.trim() === '' ? null : s.trim())
 const numberOrNull = (s: string) => (s.trim() === '' ? null : Number(s))
+const show = (v: string | null) => (v == null ? 'empty' : `"${v}"`)
 
 function toForm(doc: DocumentResponse): Form {
   return {
@@ -125,6 +126,26 @@ export default function DocumentEditor({ id, onSaved, onDeleted }: Props) {
         <h2>{doc.fileName}</h2>
         <span className={`badge ${doc.status.toLowerCase()}`}>{doc.status}</span>
       </div>
+
+      {doc.appliedCorrections.length > 0 && (
+        <div className="learned">
+          <strong>
+            Learned from {doc.appliedCorrections.length} past correction
+            {doc.appliedCorrections.length > 1 ? 's' : ''}
+          </strong>
+          <ul>
+            {doc.appliedCorrections.map((c) => (
+              <li key={c.id}>
+                <code>{c.fieldName}</code>: {show(c.extractedValue)} → {show(c.correctedValue)}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {doc.status === 'EXTRACTED' && (
+        <p className="muted hint">Fields you change here are remembered and sent with future uploads.</p>
+      )}
 
       <div className="fields">
         <label>
