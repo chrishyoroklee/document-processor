@@ -31,7 +31,7 @@ over code that is clever or complete.
 | 4 | Testcontainers integration test for the API | JUnit 5, `@SpringBootTest`, real Postgres in tests |
 | 5 | Upload endpoint that calls Claude and saves the result | `MultipartFile`, `RestClient`, Jackson, service layer, config properties |
 | 6 | `PUT` to correct fields, validation, error handling | Bean Validation, `@RestControllerAdvice`, ProblemDetail |
-| 7 | React page to upload, list and edit documents | CORS, connecting a frontend |
+| 7 | React page to upload, list and edit documents | Vite dev proxy (same origin, so no CORS), connecting a frontend |
 | 8 | Dockerfile and GitHub Actions CI | Multi-stage build, CI pipeline |
 
 ## Stack
