@@ -5,7 +5,7 @@ Status: Approved in brainstorming, pending written review
 
 ## Purpose
 
-An educational project for learning Java 21 and Spring Boot 3. Upload a business
+An educational project for learning Java 21 and Spring Boot. Upload a business
 document (invoice, receipt, purchase order), have Claude extract the key fields,
 store them in Postgres, and review or correct them in a small React page.
 
@@ -16,9 +16,10 @@ over code that is clever or complete.
 
 - **Approach:** something working end to end at every step. Each step adds one
   new concept and leaves a runnable app.
-- **Who writes the code:** the learner. For each step, Claude explains the
-  concept, the learner writes the code with guidance, and Claude reviews it
-  before moving on.
+- **Who writes the code:** Claude builds every step, with one commit per step
+  and explanatory comments, so the learner can walk the history step by step.
+  (Originally the learner was going to write each step; changed at the
+  learner's request.)
 
 ### Steps
 
@@ -35,7 +36,9 @@ over code that is clever or complete.
 
 ## Stack
 
-- Java 21, Spring Boot 3, Maven (via the Maven wrapper, `./mvnw`)
+- Java 21, Spring Boot 4.1 (3.x is past open-source support and no longer
+  offered by Spring Initializr), Maven via the wrapper, `./mvnw`
+- Repo layout: `backend/` (Spring Boot) and `frontend/` (React)
 - Spring Web, Spring Data JPA, Bean Validation, Flyway
 - PostgreSQL 16, run with docker-compose
 - Claude API over plain HTTP using Spring's `RestClient` (no SDK, no Spring AI)
@@ -64,7 +67,7 @@ PostgreSQL (:5432)
 ### Package layout
 
 ```
-src/main/java/dev/hyorok/docproc/
+backend/src/main/java/dev/hyorok/docproc/
 ├── DocprocApplication.java
 ├── document/
 │   ├── Document.java              @Entity, documents table
@@ -83,6 +86,7 @@ src/main/java/dev/hyorok/docproc/
 │   ├── ClaudeProperties.java      @ConfigurationProperties record
 │   └── ExtractionException.java
 └── web/
+    ├── HealthController.java      GET /api/health
     └── ApiExceptionHandler.java   @RestControllerAdvice
 ```
 
